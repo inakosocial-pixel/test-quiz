@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wielki Quiz Wiedzy O Niczym 2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #6366f1;
+            --accent-hover: #4f46e5;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --correct-color: #22c55e;
+            --wrong-color: #ef4444;
+            --border-color: #334155;
+            --radius: 12px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .container { width: 100%; max-width: 600px; }
+        .card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 25px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); text-align: center; }
+        .quiz-progress { width: 100%; height: 8px; background-color: var(--border-color); border-radius: 4px; overflow: hidden; margin-bottom: 20px; }
+        .quiz-progress-bar { height: 100%; width: 0%; background-color: var(--accent-color); transition: width 0.3s; }
+        .quiz-img { max-width: 100%; max-height: 250px; object-fit: cover; border-radius: 8px; margin: 15px 0; border: 1px solid var(--border-color); }
+        .answers-container { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .answer-btn { background-color: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-main); padding: 14px; font-size: 1rem; border-radius: 8px; cursor: pointer; text-align: left; transition: all 0.2s; }
+        .answer-btn:hover { border-color: var(--accent-color); background-color: #1e293b; }
+        .btn { background-color: var(--accent-color); color: white; border: none; padding: 12px 20px; font-size: 1rem; font-weight: 600; border-radius: 6px; cursor: pointer; margin-top: 15px; width: 100%; }
+        input[type="text"] { width: 100%; padding: 12px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 1rem; margin: 15px 0; }
+        .leaderboard { margin-top: 25px; text-align: left; }
+        .leaderboard table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .leaderboard th, .leaderboard td { padding: 8px; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+        .leaderboard th { color: var(--accent-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card" id="quiz-card">
+            <!-- Dynamiczny kontent -->
+        </div>
+    </div>
+
+    <script>
+        const quiz = {"title":"Wielki Quiz Wiedzy O Niczym 2","description":"zabawa trwa rafael nadal","questions":[{"id":1,"text":"Jaki jest mój ulubiony kolor?","image":"","points":1,"options":["Niebieski","Zielony","Czerwony","Czarny"],"correctIndex":0}]};
+        let currentQ = 0;
+        let score = 0;
+        const totalPoints = quiz.questions.reduce((a, b) => a + b.points, 0);
+
+        function showQuestion() {
+            const card = document.getElementById('quiz-card');
+            if (currentQ >= quiz.questions.length) {
+                showResults();
+                return;
+            }
+            const q = quiz.questions[currentQ];
+            const progress = (currentQ / quiz.questions.length) * 100;
+
+            card.innerHTML = `
+                <div class="quiz-progress"><div class="quiz-progress-bar" style="width: ${progress}%"></div></div>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">Pytanie ${currentQ + 1} z ${quiz.questions.length}</p>
+                <h2 style="margin-top: 10px;">${q.text}</h2>
+                ${q.image ? `<img src="${q.image}" class="quiz-img">` : ''}
+                <div class="answers-container">
+                    ${q.options.map((opt, i) => `
+                        <button class="answer-btn" onclick="selectAnswer(${i})">${opt}</button>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function selectAnswer(i) {
+            if (i === quiz.questions[currentQ].correctIndex) {
+                score += quiz.questions[currentQ].points;
+            }
+            currentQ++;
+            showQuestion();
+        }
+
+        function showResults() {
+            const card = document.getElementById('quiz-card');
+            card.innerHTML = `
+                <h2>Koniec Quizu!</h2>
+                <p style="margin: 15px 0; font-size: 1.2rem;">Twój wynik: <strong>${score} / ${totalPoints} pkt</strong></p>
+                <input type="text" id="username" placeholder="Wpisz swoje imię do rankingu..." maxlength="20">
+                <button class="btn" onclick="saveScore()">Zapisz wynik</button>
+                <div id="leaderboard-box" class="leaderboard"></div>
+            `;
+            renderLeaderboard();
+        }
+
+        function saveScore() {
+            const nameInput = document.getElementById('username');
+            const name = nameInput ? nameInput.value.trim() : 'Anonim';
+            if (!name) return;
+
+            let scores = JSON.parse(localStorage.getItem('quiz_scores_' + quiz.title) || '[]');
+            scores.push({ name: name, score: score, date: new Date().toLocaleDateString() });
+            scores.sort((a, b) => b.score - a.score);
+            scores = scores.slice(0, 10); // top 10
+
+            localStorage.setItem('quiz_scores_' + quiz.title, JSON.stringify(scores));
+            renderLeaderboard();
+            if (nameInput) nameInput.disabled = true;
+        }
+
+        function renderLeaderboard() {
+            const box = document.getElementById('leaderboard-box');
+            if (!box) return;
+            let scores = JSON.parse(localStorage.getItem('quiz_scores_' + quiz.title) || '[]');
+
+            box.innerHTML = `
+                <h3 style="color: var(--accent-color);">Tabela Wyników (Lokalna)</h3>
+                <table>
+                    <thead><tr><th>#</th><th>Gracz</th><th>Wynik</th></tr></thead>
+                    <tbody>
+                        ${scores.length === 0 ? '<tr><td colspan="3">Brak zapisanych wyników. Bądź pierwszy!</td></tr>' : ''}
+                        ${scores.map((s, i) => `
+                            <tr><td>${i + 1}</td><td>${s.name}</td><td>${s.score} pkt</td></tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        showQuestion();
+    </script>
+</body>
+</html>
